@@ -12,6 +12,7 @@ import {
 
 import { getCreator } from '../../data/creators';
 import { VIDEOS } from '../../data/videos';
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 import { useAnimatedValue } from '../../lib/useAnimatedValue';
 import { useAppStore } from '../../store/useAppStore';
 import { colors } from '../../theme/tokens';
@@ -66,13 +67,13 @@ function useToast() {
       Animated.timing(opacity, {
         toValue: 1,
         duration: 160,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }).start();
       timer.current = setTimeout(() => {
         Animated.timing(opacity, {
           toValue: 0,
           duration: 240,
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         }).start(({ finished }) => {
           if (finished) setMessage(null);
         });

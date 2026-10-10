@@ -3,6 +3,7 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-nativ
 
 import type { Creator, Video } from '../../data/types';
 import { formatCount } from '../../lib/format';
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 import { useAnimatedValue } from '../../lib/useAnimatedValue';
 import { useTabBarHeight } from '../../lib/useTabBarHeight';
 import { colors } from '../../theme/tokens';
@@ -31,13 +32,13 @@ function MetricButton({ icon, label, a11yLabel, active = false, tone, onPress }:
         toValue: 0.8,
         duration: 90,
         easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
       Animated.spring(scale, {
         toValue: 1,
         friction: 4,
         tension: 180,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     ]).start();
     onPress();

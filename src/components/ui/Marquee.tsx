@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 import { useAnimatedValue } from '../../lib/useAnimatedValue';
 
 interface MarqueeProps {
@@ -37,7 +38,7 @@ export function Marquee({ text, style, containerStyle, speed = 8 }: MarqueeProps
         toValue: -distance,
         duration: speed * 1000 * (distance / Math.max(textWidth, 1)),
         easing: Easing.linear,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     );
     animation.start();

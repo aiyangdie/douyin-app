@@ -12,6 +12,7 @@ import {
 
 import { getCreator } from '../../data/creators';
 import type { Video } from '../../data/types';
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 import { useAnimatedValue } from '../../lib/useAnimatedValue';
 import { useTabBarHeight } from '../../lib/useTabBarHeight';
 import { useAppStore, displayLikes } from '../../store/useAppStore';
@@ -88,7 +89,7 @@ export function VideoPage({
         toValue: 1,
         duration: 900,
         easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }).start();
       // Double tap always likes; it never un-likes.
       if (!liked) toggleLike(video.id);

@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 import { useAnimatedValue } from '../../lib/useAnimatedValue';
 
 interface MusicDiscProps {
@@ -26,7 +27,7 @@ export function MusicDisc({ artwork, spinning, size = 44 }: MusicDiscProps) {
         toValue: 1,
         duration: 6000,
         easing: Easing.linear,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     );
     loop.start();

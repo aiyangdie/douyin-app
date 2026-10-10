@@ -41,6 +41,8 @@ class Cdp {
     this.ws = ws;
     this.nextId = 1;
     this.pending = new Map();
+    /** Console warnings/errors collected for the whole session. */
+    this.console = [];
     ws.addEventListener('message', (event) => {
       const message = JSON.parse(event.data);
       if (message.id && this.pending.has(message.id)) {
@@ -48,8 +50,30 @@ class Cdp {
         this.pending.delete(message.id);
         if (message.error) reject(new Error(JSON.stringify(message.error)));
         else resolve(message.result);
+        return;
       }
+      this.#recordConsole(message);
     });
+  }
+
+  #recordConsole(message) {
+    const describe = (args) =>
+      args
+        .map((arg) => arg.value ?? arg.description ?? arg.type ?? '')
+        .join(' ')
+        .slice(0, 400);
+
+    if (message.method === 'Runtime.consoleAPICalled') {
+      const { type, args } = message.params;
+      if (type === 'warning' || type === 'error') {
+        this.console.push({ type, text: describe(args) });
+      }
+    } else if (message.method === 'Log.entryAdded') {
+      const { level, text, source } = message.params.entry;
+      if (level === 'error' || level === 'warning') {
+        this.console.push({ type: level, text: `[${source}] ${text}`.slice(0, 400) });
+      }
+    }
   }
 
   static async connect(url) {
@@ -198,6 +222,7 @@ async function main() {
 
   await cdp.send('Page.enable');
   await cdp.send('Runtime.enable');
+  await cdp.send('Log.enable');
   await cdp.send('Emulation.setDeviceMetricsOverride', {
     width: plan.viewport?.width ?? 390,
     height: plan.viewport?.height ?? 844,
@@ -241,6 +266,32 @@ async function main() {
     console.log(`  final page errors: ${JSON.stringify(finalErrors).slice(0, 600)}`);
   } else {
     console.log('  no page errors');
+  }
+
+  // Console noise is part of the result: a fix that removes a warning is only
+  // verified once the warning stops appearing. Stacks are printed in full so a
+  // warning raised inside a dependency can be attributed to its source.
+  const ignoredPattern = /DevTools|LanguageDetector|listener indicated an asynchronous response/i;
+  const noise = cdp.console.filter((entry) => !ignoredPattern.test(entry.text));
+  const ignored = cdp.console.length - noise.length;
+  console.log('');
+  console.log(
+    `console warnings/errors : ${noise.length}  (${ignored} browser noise entries filtered)`,
+  );
+
+  const grouped = new Map();
+  for (const entry of noise) {
+    const key = `${entry.type}: ${entry.text.split('\n')[0].slice(0, 130)}`;
+    if (!grouped.has(key)) grouped.set(key, { count: 0, sample: entry.text });
+    grouped.get(key).count += 1;
+  }
+  for (const [key, { count, sample }] of grouped) {
+    console.log(`  x${String(count).padStart(3)}  ${key}`);
+    if (count === 1 && sample.includes('\n')) {
+      for (const line of sample.split('\n').slice(1, 22)) {
+        console.log(`         ${line.slice(0, 150)}`);
+      }
+    }
   }
 
   cdp.ws.close();

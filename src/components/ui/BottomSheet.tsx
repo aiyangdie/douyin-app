@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 import { useAnimatedValue } from '../../lib/useAnimatedValue';
 import { colors } from '../../theme/tokens';
 
@@ -49,13 +50,13 @@ export function BottomSheet({
         toValue: visible ? 0 : height,
         duration: visible ? 260 : 220,
         easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
       Animated.timing(backdrop, {
         toValue: visible ? 1 : 0,
         duration: visible ? 260 : 200,
         easing: visible ? Easing.out(Easing.quad) : Easing.in(Easing.quad),
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     ]).start();
   }, [visible, height, translateY, backdrop]);
