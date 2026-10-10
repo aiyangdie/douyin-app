@@ -1,8 +1,12 @@
 # 抖音 · Douyin Clone (Expo / React Native)
 
 一个用 **Expo SDK 57 + React Native 0.86 + TypeScript** 写的仿抖音短视频 App。
-竖向全屏视频流、双击点赞、评论面板、分享面板、消息中心、个人主页，全部跑在本地素材上，
-**不依赖任何网络请求或第三方接口**。
+竖向全屏视频流、双击点赞、评论面板、分享面板、消息中心、个人主页 —— 全部跑在本地素材上，
+**离线可用，不依赖任何第三方接口**。
+
+另外配了一套 **内容管理后台**：Node 后端（**零 npm 依赖**）+ Web 控制台，
+可以查看用户、审核视频、管理评论、追踪操作日志。App 是**离线优先**的 ——
+后台不开、断网、接口报错，App 都照常能用。
 
 > **直接装到手机体验** → [下载 v1.0.0 APK](https://github.com/aiyangdie/douyin-app/releases/latest)
 > （82 MB，含 `arm64-v8a` / `armeabi-v7a` / `x86_64`，已在 Pixel 5 / Android 11 实机验证）
@@ -23,6 +27,15 @@ npm run android    # Android 模拟器 / 真机
 也可以 `npx expo start` 后用 **Expo Go** 扫码在手机上直接打开 —— 用到的原生模块
 （`expo-video`、`expo-blur`、`expo-haptics`、`expo-linear-gradient`、`async-storage`）
 都在 Expo Go 的内置列表里，不需要 development build。
+
+### 启动管理后台（可选）
+
+```bash
+npm run server     # → http://localhost:4000   账号 admin / 密码 admin123
+npm run smoke      # 43 项接口冒烟测试
+```
+
+完整说明见 **[docs/后台管理.md](docs/后台管理.md)**。
 
 ---
 
@@ -95,9 +108,39 @@ UI 覆盖层。列表本身用 `windowSize={3}` + `removeClippedSubviews` 限制
 - **消息** —— 新粉丝/赞/@我的/评论 四个快捷入口 + 会话列表（未读角标）
 - **我** —— 渐变封面、头像、数据统计、作品/喜欢/收藏三个分栏与九宫格
 
+### 发布视频（需后台）
+底部 `+` 按钮进入发布页：选素材、填文案与话题、上传到服务器。
+上传成功后进入**待审核**状态，**要等后台审核通过才会出现在推荐流里**。
+
+> 目前只能从内置样例片段里选素材。从手机相册选需要引入 `expo-image-picker`，
+> 那是个原生模块，会让已经发出去的 APK 失效（必须重新构建发版）。
+> 代码里已把这步隔离成 `src/app/publish.tsx` 里的单个函数，将来替换只改一处。
+
 ### 状态持久化
 点赞、收藏、关注、评论点赞、静音偏好通过 `zustand` + `AsyncStorage` 持久化，
 重启 App 后保留。
+
+---
+
+## 管理后台
+
+![数据概览](docs/screenshots/admin/02-dashboard.png)
+
+**零 npm 依赖**的 Node 后端 + 无构建步骤的 Web 控制台，跑在同一个端口上：
+
+| 模块 | 能做什么 |
+|---|---|
+| **数据概览** | 核心指标、近 14 天趋势图、待审核快捷入口、存储占用 |
+| **审核队列** | 待审核工作台，支持批量勾选与键盘快捷键（<kbd>A</kbd> 通过 / <kbd>R</kbd> 驳回 / <kbd>空格</kbd> 播放） |
+| **视频管理** | 网格/列表双视图、多维筛选排序、卡片内预览播放、批量操作 |
+| **用户管理** | 搜索筛选排序、封禁解封、详情抽屉（含作品与评论） |
+| **评论管理** | 敏感词高亮与筛选、隐藏/恢复/删除 |
+| **操作日志** | 每次审核、封禁、删除都有留痕 |
+
+后端用 Node 24 内置的 `node:sqlite` 与 `node:http` 写成，
+`server/` 下**没有任何 npm 依赖** —— 没有安装步骤，也就没有安装失败。
+
+详细架构、数据模型、接口清单与**安全边界**见 **[docs/后台管理.md](docs/后台管理.md)**。
 
 ---
 
@@ -108,6 +151,7 @@ douyin-app/
 ├── src/
 │   ├── app/                      # Expo Router 路由树（约定：路由只能放这里）
 │   │   ├── _layout.tsx           # 根布局：SafeAreaProvider + Stack + 两个底部面板
+│   │   ├── publish.tsx           # 发布视频（上传到后台）
 │   │   └── (tabs)/
 │   │       ├── _layout.tsx       # 底部 Tab 导航（自定义 tabBar）
 │   │       ├── index.tsx         # 首页 · 视频流
@@ -120,14 +164,26 @@ douyin-app/
 │   │   ├── tabs/                 # DouyinTabBar（含红青错位的「+」按钮）
 │   │   └── ui/                   # Avatar / BottomSheet / Marquee
 │   ├── data/                     # 类型与模拟数据（创作者、视频、评论、会话）
-│   ├── lib/                      # format / useAnimatedValue / useTabBarHeight
+│   ├── lib/                      # format / animation / api（后端客户端）/ useRemoteFeed
 │   ├── store/                    # zustand 全局状态
 │   └── theme/                    # 设计变量与公共样式
+├── server/                       # 后端（零 npm 依赖）
+│   ├── index.js                  # HTTP 服务：路由 + 鉴权 + 静态托管 + Range 视频流
+│   ├── db.js                     # node:sqlite 建表与查询辅助
+│   ├── auth.js                   # scrypt 密码哈希 + 会话 token
+│   ├── multipart.js              # 极简 multipart 解析（上传用）
+│   ├── seed.js                   # 种子数据：导入 App 的创作者 / 视频 / 评论
+│   └── routes/                   # auth / stats / users / videos / comments / upload / logs / feed
+├── admin/                        # 管理后台（无构建步骤的原生 ES Module SPA）
+│   ├── index.html
+│   ├── styles.css                # 设计系统
+│   └── js/{api,ui,router,app}.js + views/
 ├── assets/
 │   ├── videos/                   # 8 条本地竖屏视频（约 2.5 MB）
 │   ├── avatars/                  # 9 张渐变头像
 │   └── thumbs/                   # 8 张视频封面
-└── tools/                        # 素材生成 + Web 验证工具（见 tools/README.md）
+├── docs/                         # 截图 + 后台管理文档
+└── tools/                        # 素材生成 + Web 验证 + 接口冒烟测试
 ```
 
 ---

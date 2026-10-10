@@ -39,7 +39,10 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "server": "node --no-warnings=ExperimentalWarning server/index.js",
+    "server:seed": "node --no-warnings=ExperimentalWarning server/seed.js --force",
+    "smoke": "node tools/api-smoke.mjs"
   },
   "private": true
 }

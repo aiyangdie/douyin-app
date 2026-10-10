@@ -27,8 +27,11 @@ export interface Video {
   tags: string[];
   /** Name of the background track shown on the music line. */
   music: string;
-  /** Loopable local video file. */
-  source: number;
+  /**
+   * Loopable video. A bundled asset (`require()`) for the local fixtures, or a
+   * URL string when the video came from the server — `expo-video` accepts both.
+   */
+  source: number | string;
   /** Poster frame shown before the player is ready. */
   thumbnail: ImageSourcePropType;
   durationSeconds: number;
@@ -40,6 +43,11 @@ export interface Video {
   };
   /** Location chip rendered above the caption, when present. */
   location?: string;
+  /**
+   * Set only on server-supplied videos, whose authors are not in the bundled
+   * fixture table. Falls back to `getCreator(creatorId)` when absent.
+   */
+  creator?: Creator;
 }
 
 /** A comment inside the comment sheet. */

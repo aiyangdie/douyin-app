@@ -42,3 +42,17 @@ yarn-error.*
 
 # Fonts copied from the host by tools/gen_videos.py (see tools/README.md)
 tools/fonts/
+
+# Backend runtime data: the SQLite database plus media copied in by `seed.js`
+# and uploaded through the app. Regenerated with `npm run server:seed`.
+server/data/
+server/uploads/
+
+# Expo's template MIT licence, attributing "Copyright (c) 2015-present 650
+# Industries, Inc." to this project's code. Left on disk but deliberately not
+# published; add your own licence before making the repo official.
+LICENSE
+
+# Partial backup of a corrupted node_modules, left behind by an external repair
+# step during the drive migration on 2026-10-10. Not ours to delete.
+node_modules.before-repair-*/

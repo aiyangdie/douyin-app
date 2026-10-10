@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { FeedHeader } from '../../components/feed/FeedHeader';
 import { VideoFeed } from '../../components/feed/VideoFeed';
 import { VIDEOS } from '../../data/videos';
+import { useRemoteFeed } from '../../lib/useRemoteFeed';
 import { useAppStore } from '../../store/useAppStore';
 import { colors } from '../../theme/tokens';
 
@@ -18,12 +19,18 @@ export default function HomeScreen() {
   const toggleMute = useAppStore((state) => state.toggleMute);
   const followedCreators = useAppStore((state) => state.followedCreators);
 
+  // `null` while loading and whenever the server is unreachable, in which case
+  // the bundled fixtures below keep the feed fully functional offline.
+  const remoteVideos = useRemoteFeed();
+
   const videos = useMemo(() => {
-    if (feedTab === 'recommended') return VIDEOS;
-    const followed = VIDEOS.filter((video) => followedCreators[video.creatorId]);
+    const pool = remoteVideos?.length ? remoteVideos : VIDEOS;
+
+    if (feedTab === 'recommended') return pool;
+    const followed = pool.filter((video) => followedCreators[video.creatorId]);
     // An empty 关注 tab would look broken, so fall back to a starter feed.
-    return followed.length > 0 ? followed : VIDEOS.slice(0, STARTER_FEED_SIZE);
-  }, [feedTab, followedCreators]);
+    return followed.length > 0 ? followed : pool.slice(0, STARTER_FEED_SIZE);
+  }, [feedTab, followedCreators, remoteVideos]);
 
   return (
     <View style={styles.screen}>

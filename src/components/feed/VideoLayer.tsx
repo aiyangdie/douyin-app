@@ -6,8 +6,8 @@ import type { Animated } from 'react-native';
 import { FILL } from '../../theme/styles';
 
 interface VideoLayerProps {
-  /** Local asset from `require()`. */
-  source: number;
+  /** Bundled asset from `require()`, or a remote URL when fetched from the server. */
+  source: number | string;
   /** Whether this page is the one currently filling the screen. */
   isActive: boolean;
   /** User tapped to pause. */

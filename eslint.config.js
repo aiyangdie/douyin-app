@@ -25,4 +25,25 @@ module.exports = defineConfig([
       },
     },
   },
+  {
+    // `server/**` is a plain Node ESM service — no bundler, no React Native —
+    // so it needs Node globals too. Without this every `Buffer` shows up as a
+    // no-undef error even though the code is correct.
+    files: ['server/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: 'module',
+      globals: {
+        Buffer: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+        AbortController: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+      },
+    },
+  },
 ]);

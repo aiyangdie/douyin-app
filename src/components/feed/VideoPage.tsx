@@ -50,7 +50,8 @@ export function VideoPage({
   paused,
   onSingleTap,
 }: VideoPageProps) {
-  const creator = getCreator(video.creatorId);
+  // Server-supplied videos carry their own author; bundled ones use the fixture table.
+  const creator = video.creator ?? getCreator(video.creatorId);
   const tabBarHeight = useTabBarHeight();
 
   const liked = useAppStore((s) => Boolean(s.likedVideos[video.id]));

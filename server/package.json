@@ -1,0 +1,12 @@
+{
+  "name": "douyin-app-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "零依赖后端：node:http + node:sqlite",
+  "scripts": {
+    "start": "node --no-warnings=ExperimentalWarning index.js",
+    "seed": "node --no-warnings=ExperimentalWarning seed.js",
+    "reseed": "node --no-warnings=ExperimentalWarning seed.js --force"
+  }
+}

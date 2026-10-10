@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>抖音后台 · 管理控制台</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <!-- ── 登录 ─────────────────────────────────────────────────────── -->
+    <div id="login-screen" class="login-screen" hidden>
+      <form id="login-form" class="login-card">
+        <div class="login-brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <h1>抖音后台</h1>
+            <p>内容管理控制台</p>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>账号</span>
+          <input id="login-username" name="username" autocomplete="username" value="admin" required />
+        </label>
+
+        <label class="field">
+          <span>密码</span>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" value="admin123" required />
+        </label>
+
+        <p id="login-error" class="login-error" role="alert" hidden></p>
+
+        <button class="btn btn-primary btn-block" type="submit">登录</button>
+        <p class="login-hint">默认账号 <code>admin</code> · 密码 <code>admin123</code>（首次部署后请及时修改）</p>
+      </form>
+    </div>
+
+    <!-- ── 控制台 ───────────────────────────────────────────────────── -->
+    <div id="app" class="app" hidden>
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <strong>抖音后台</strong>
+            <small>内容管理控制台</small>
+          </div>
+        </div>
+        <nav id="nav" class="nav" aria-label="主导航"></nav>
+        <div class="sidebar-foot">
+          <div id="admin-chip" class="admin-chip"></div>
+          <button id="logout" class="btn btn-ghost btn-sm" type="button">退出登录</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h2 id="page-title">数据概览</h2>
+            <p id="page-subtitle" class="muted"></p>
+          </div>
+          <div class="topbar-actions">
+            <span id="health" class="health" title="服务状态"></span>
+            <button id="refresh" class="btn btn-ghost btn-sm" type="button">刷新</button>
+          </div>
+        </header>
+        <div id="view" class="view" aria-live="polite"></div>
+      </main>
+    </div>
+
+    <!-- ── 浮层 ─────────────────────────────────────────────────────── -->
+    <div id="drawer" class="drawer" hidden></div>
+    <div id="modal" class="modal" hidden></div>
+    <div id="toasts" class="toasts" aria-live="assertive"></div>
+
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>

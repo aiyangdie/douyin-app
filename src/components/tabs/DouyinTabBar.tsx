@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,6 +48,9 @@ function CreateButton({ onPress }: { onPress: () => void }) {
 /** Custom bottom bar: black chrome, text-only labels, centred create button. */
 export function DouyinTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  // The create action lives outside the tab navigator, so it routes through the
+  // root stack rather than `navigation`.
+  const router = useRouter();
   const activeRoute = state.routes[state.index]?.name;
 
   const renderTab = (spec: TabSpec) => {
@@ -111,7 +115,7 @@ export function DouyinTabBar({ state, navigation }: BottomTabBarProps) {
       {ordered.map((item) =>
         item === 'create' ? (
           <View key="create" style={styles.slot}>
-            <CreateButton onPress={() => navigation.navigate('index')} />
+            <CreateButton onPress={() => router.push('/publish')} />
           </View>
         ) : (
           <View key={item.route} style={styles.slot}>
