@@ -4,6 +4,9 @@
 竖向全屏视频流、双击点赞、评论面板、分享面板、消息中心、个人主页，全部跑在本地素材上，
 **不依赖任何网络请求或第三方接口**。
 
+> **直接装到手机体验** → [下载 v1.0.0 APK](https://github.com/aiyangdie/douyin-app/releases/latest)
+> （82 MB，含 `arm64-v8a` / `armeabi-v7a` / `x86_64`，已在 Pixel 5 / Android 11 实机验证）
+
 ---
 
 ## 快速开始
