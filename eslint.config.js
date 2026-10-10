@@ -4,7 +4,16 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*', '.expo/*', 'node_modules/*', 'expo-env.d.ts'],
+    ignores: [
+      'dist/*',
+      '.expo/*',
+      'node_modules/*',
+      // ESLint only auto-ignores the literal `node_modules` directory, so a
+      // partial backup such as `node_modules.before-repair-*` gets linted and
+      // fails the whole run on third-party code.
+      'node_modules.*/*',
+      'expo-env.d.ts',
+    ],
   },
   {
     // `tools/shoot.mjs` is a standalone Node script (the CDP verification

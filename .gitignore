@@ -53,6 +53,8 @@ server/uploads/
 # published; add your own licence before making the repo official.
 LICENSE
 
-# Partial backup of a corrupted node_modules, left behind by an external repair
-# step during the drive migration on 2026-10-10. Not ours to delete.
-node_modules.before-repair-*/
+# Partial backups of node_modules (e.g. `node_modules.before-repair-*`), left
+# behind by external repair steps. ESLint and TypeScript only auto-ignore the
+# literal `node_modules` directory, so anything merely *starting* with that name
+# still gets compiled and linted — keep them out of the repo and out of the build.
+node_modules.*/
