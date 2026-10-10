@@ -74,7 +74,11 @@ export function VideoFeed({ videos }: VideoFeedProps) {
           data={videos}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          pagingEnabled
+          // `pagingEnabled` is deliberately absent: React Native documents it as
+          // unsupported for *vertical* paging on Android, and having it set
+          // alongside `snapToInterval` made every drag snap back to the page it
+          // started on. `snapToInterval` is the supported way to page here and
+          // works on both platforms.
           snapToInterval={pageHeight}
           snapToAlignment="start"
           decelerationRate="fast"

@@ -36,6 +36,30 @@ npm run android    # Android 模拟器 / 真机
 |---|---|---|---|
 | ![滑动](docs/screenshots/05-second-video.png) | ![朋友](docs/screenshots/06-friends.png) | ![消息](docs/screenshots/07-inbox.png) | ![我](docs/screenshots/08-profile.png) |
 
+### Android 实机（release APK，Pixel 5 / Android 11）
+
+| 视频流 | 评论面板 | 分享面板 | 个人主页 |
+|---|---|---|---|
+| ![Android 视频流](docs/screenshots/09-android-feed.png) | ![Android 评论](docs/screenshots/10-android-comments.png) | ![Android 分享](docs/screenshots/11-android-share.png) | ![Android 主页](docs/screenshots/12-android-profile.png) |
+
+---
+
+## 打包 Android APK
+
+```bash
+npx expo prebuild --platform android --no-install
+cd android
+./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+# -> android/app/build/outputs/apk/release/app-release.apk
+```
+
+`app.json` 里的 `com.example.douyinapp` 是脚手架占位包名。侧载到自己的手机没问题，
+但 **Google Play 会拒绝 `com.example.*`**，而且包名一经发布不可更改 —— 上架前先改成
+你自己的域名倒写。
+
+release 构建默认用仓库里的 debug keystore 签名（Expo 模板行为），所以能直接安装；
+要上架则需换成自己的签名密钥，并妥善保管 —— 丢了就无法再更新同一个应用。
+
 ---
 
 ## 功能
@@ -142,7 +166,8 @@ Web 端用 CDP 做了实机截图验证（`tools/shoot.mjs`，零依赖），覆
 
 1. **`expo-router` 的 `Tabs` 在 SDK 57 已废弃**，要从 `expo-router/js-tabs` 导入。
    项目里用的是 `expo-router@57.0.25`。
-2. **SDK 57 不再内置 `@expo/vector-icons`**，需要显式安装。
+2. **SDK 57 不再内置 `@expo/vector-icons`**，需要显式安装，并且它还需要 `expo-font`
+   作为 peer dependency（缺了 `expo-doctor` 会报，且脱离 Expo Go 会崩溃）。
 3. **`StyleSheet.absoluteFillObject` 在 RN 0.86 已被移除**，只剩 `absoluteFill`，
    且它现在直接就是样式对象（不再是注册 ID），可以展开。
 4. **`<video>` / `<img>` 是替换元素**：`position:absolute; inset:0` 配 `width:auto`
@@ -153,9 +178,12 @@ Web 端用 CDP 做了实机截图验证（`tools/shoot.mjs`，零依赖），覆
    输入框和「取消」按钮会被压住。
 6. **`useRef(...).current` 在渲染期读取**会被 React Compiler 的 lint 规则拒绝；
    用 `useState(() => new Animated.Value(x))` 持有实例（见 `lib/useAnimatedValue.ts`）。
-7. **ffmpeg 的 `noise` 滤镜会把视频体积放大 250 倍** —— 每帧随机噪点几乎不可压缩，
+7. **`pagingEnabled` 在 Android 上不支持纵向分页**（React Native 明文写的限制）。
+   它和 `snapToInterval` 同时设置时，Android 上每次拖动都会被吸回原来那一页 ——
+   Web 端却正常，因为浏览器用的是原生滚动。只用 `snapToInterval` 即可两端都对。
+8. **ffmpeg 的 `noise` 滤镜会把视频体积放大 250 倍** —— 每帧随机噪点几乎不可压缩，
    8 秒短片从 ~300 KB 变成 ~77 MB。
-8. **Windows 下向 ffmpeg 传中文参数会被破坏**，且字体绝对路径的盘符冒号会被
+9. **Windows 下向 ffmpeg 传中文参数会被破坏**，且字体绝对路径的盘符冒号会被
    filtergraph 解析成选项分隔符 —— 改用 Python `subprocess` + 相对字体路径。
 
 ---
