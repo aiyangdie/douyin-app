@@ -8,7 +8,7 @@
 可以查看用户、审核视频、管理评论、追踪操作日志。App 是**离线优先**的 ——
 后台不开、断网、接口报错，App 都照常能用。
 
-> **直接装到手机体验** → [下载 v1.0.0 APK](https://github.com/aiyangdie/douyin-app/releases/latest)
+> **直接装到手机体验** → [下载 v1.1.0 APK](https://github.com/aiyangdie/douyin-app/releases/latest)
 > （82 MB，含 `arm64-v8a` / `armeabi-v7a` / `x86_64`，已在 Pixel 5 / Android 11 实机验证）
 
 ---
@@ -57,6 +57,16 @@ npm run smoke      # 43 项接口冒烟测试
 | 视频流 | 评论面板 | 分享面板 | 个人主页 |
 |---|---|---|---|
 | ![Android 视频流](docs/screenshots/09-android-feed.png) | ![Android 评论](docs/screenshots/10-android-comments.png) | ![Android 分享](docs/screenshots/11-android-share.png) | ![Android 主页](docs/screenshots/12-android-profile.png) |
+
+### v1.1.0 真机实测：发布 → 上传 → 后台审核
+
+| 推荐流（从服务器拉取） | 发布页（含相册选择） | 上传成功 |
+|---|---|---|
+| ![真机视频流](docs/screenshots/app/16-android-v110-feed.png) | ![真机发布页](docs/screenshots/app/18-android-v110-publish.png) | ![上传成功](docs/screenshots/app/17-android-v110-upload.png) |
+
+上传后立刻出现在后台的审核队列里（下图第一条即为真机上传的那条）：
+
+![后台审核队列](docs/screenshots/admin/21-review-with-device-upload.png)
 
 ---
 
@@ -109,12 +119,11 @@ UI 覆盖层。列表本身用 `windowSize={3}` + `removeClippedSubviews` 限制
 - **我** —— 渐变封面、头像、数据统计、作品/喜欢/收藏三个分栏与九宫格
 
 ### 发布视频（需后台）
-底部 `+` 按钮进入发布页：选素材、填文案与话题、上传到服务器。
+底部 `+` 按钮进入发布页：**从相册选视频**（或使用内置示例素材）、填文案与话题、上传到服务器。
 上传成功后进入**待审核**状态，**要等后台审核通过才会出现在推荐流里**。
 
-> 目前只能从内置样例片段里选素材。从手机相册选需要引入 `expo-image-picker`，
-> 那是个原生模块，会让已经发出去的 APK 失效（必须重新构建发版）。
-> 代码里已把这步隔离成 `src/app/publish.tsx` 里的单个函数，将来替换只改一处。
+相册选择用 `expo-image-picker`。内置示例素材被特意保留下来 —— Web 预览和模拟器里
+没有相册，有它才能让「上传 → 审核 → 进推荐流」这条链路在任何环境下都跑得通。
 
 ### 状态持久化
 点赞、收藏、关注、评论点赞、静音偏好通过 `zustand` + `AsyncStorage` 持久化，

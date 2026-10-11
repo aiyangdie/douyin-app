@@ -10,6 +10,7 @@
  *
  *   EXPO_PUBLIC_API_BASE=http://192.168.1.20:4000 npx expo start
  */
+import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 const DEFAULT_PORT = 4000;
@@ -73,8 +74,14 @@ function withTimeout(ms: number): { signal: AbortSignal; done: () => void } {
   return { signal: controller.signal, done: () => clearTimeout(timer) };
 }
 
-/** Cheap liveness probe used by the publish screen. */
-export async function checkHealth(timeoutMs = 3000): Promise<boolean> {
+/**
+ * Cheap liveness probe used by the publish screen.
+ *
+ * The timeout is deliberately generous: on a cold emulator the first request
+ * can take several seconds, and a 3s ceiling made the app report "server
+ * offline" against a server that was in fact perfectly reachable.
+ */
+export async function checkHealth(timeoutMs = 8000): Promise<boolean> {
   const { signal, done } = withTimeout(timeoutMs);
   try {
     const response = await fetch(`${API_BASE}/api/health`, { signal });
@@ -107,20 +114,18 @@ export async function uploadVideo(input: UploadInput, timeoutMs = 120_000): Prom
   const form = new FormData();
 
   if (Platform.OS === 'web') {
-    // The DOM's FormData only accepts a real Blob for a file part. The
-    // `{uri, name, type}` shape used below is a React Native extension that the
-    // browser silently stringifies to "[object Object]", which makes the server
-    // reject the request with "没有收到视频文件".
+    // The DOM's FormData only accepts a real Blob for a file part.
     const blob = await (await fetch(input.uri)).blob();
     form.append('file', blob, input.fileName);
   } else {
-    // React Native's FormData takes this shape for files; the DOM types do not
-    // model it, hence the cast.
-    form.append('file', {
-      uri: input.uri,
-      name: input.fileName,
-      type: input.mimeType,
-    } as unknown as Blob);
+    // Do NOT use React Native's `{uri, name, type}` shape here. Since SDK 54
+    // the global `fetch` is Expo's WinterCG implementation, whose FormData
+    // converter accepts only a string, a `Blob`, or an object exposing
+    // `bytes()` — anything else throws "Unsupported FormDataPart
+    // implementation". `FileSystem.File` implements `Blob`, so it goes through.
+    // (The RN shape still works with the old networking stack, which is why
+    // this looked correct and only failed on a real device.)
+    form.append('file', new File(input.uri) as unknown as Blob);
   }
 
   form.append('caption', input.caption);

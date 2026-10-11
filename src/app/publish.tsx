@@ -1,15 +1,15 @@
 /**
  * 发布视频。
  *
- * Picks from the clips bundled with the app and uploads the chosen one to the
- * backend, where it lands in the review queue. Picking from the device gallery
- * would mean adding `expo-image-picker` — a native module, which would
- * invalidate the already-published APK — so the sample clips are used instead.
- * Swapping in the gallery picker later is a one-function change:
- * replace `resolveAssetUri` with the picker's `assets[0].uri`.
+ * 两条素材来源：**从相册选**（主路径）和**内置示例片段**（备选）。
+ * 保留内置片段是有意的 —— Web 预览和模拟器里没有相册，示例素材让这条
+ * 链路在任何一个环境下都能跑通，也方便演示。
+ *
+ * 上传到服务器后视频进入 `pending`，要等后台审核通过才会出现在推荐流里。
  */
 import { Ionicons } from '@expo/vector-icons';
 import { Asset } from 'expo-asset';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -34,6 +34,11 @@ const TAG_CHOICES = ['#日常', '#旅行', '#美食', '#健身', '#摄影', '#vl
 
 type Status = 'idle' | 'uploading' | 'done' | 'error';
 
+/** 即将发布的素材：内置片段，或从相册选中的视频。 */
+type Selection =
+  | { kind: 'clip'; index: number }
+  | { kind: 'gallery'; uri: string; fileName: string; mimeType: string };
+
 /** Turns a `require()`d asset into a URI the upload can read. */
 async function resolveAssetUri(moduleId: number): Promise<string> {
   const asset = Asset.fromModule(moduleId);
@@ -47,14 +52,14 @@ export default function PublishScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [index, setIndex] = useState(0);
+  const [selection, setSelection] = useState<Selection>({ kind: 'clip', index: 0 });
   const [caption, setCaption] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState('');
   const [online, setOnline] = useState<boolean | null>(null);
 
-  const clip = VIDEOS[index];
+  const clip = selection.kind === 'clip' ? VIDEOS[selection.index] : null;
 
   // Probe the server once so the button can explain itself before being pressed.
   useEffect(() => {
@@ -67,6 +72,43 @@ export default function PublishScreen() {
     };
   }, []);
 
+  /** Re-runs the probe; the status row is tappable for exactly this. */
+  const recheck = async () => {
+    setOnline(null);
+    setOnline(await checkHealth());
+  };
+
+  const pickFromGallery = async () => {
+    setMessage('');
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setStatus('error');
+        setMessage('需要相册权限才能选择视频。请在系统设置里允许后重试。');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        allowsMultipleSelection: false,
+        quality: 1,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const asset = result.assets[0];
+      setSelection({
+        kind: 'gallery',
+        uri: asset.uri,
+        fileName: asset.fileName ?? `video-${Date.now()}.mp4`,
+        mimeType: asset.mimeType ?? 'video/mp4',
+      });
+      setStatus('idle');
+    } catch (error) {
+      setStatus('error');
+      setMessage(error instanceof Error ? error.message : '打开相册失败');
+    }
+  };
+
   const toggleTag = (tag: string) =>
     setTags((current) =>
       current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag].slice(0, 5),
@@ -76,23 +118,27 @@ export default function PublishScreen() {
     setStatus('uploading');
     setMessage('正在准备文件…');
     try {
-      const uri = await resolveAssetUri(clip.source as number);
+      const payload =
+        selection.kind === 'gallery'
+          ? selection
+          : {
+              uri: await resolveAssetUri(clip!.source as number),
+              fileName: `${clip!.id}.mp4`,
+              mimeType: 'video/mp4',
+            };
+
       setMessage('正在上传…');
 
       const result = await uploadVideo({
-        uri,
-        fileName: `${clip.id}.mp4`,
-        mimeType: 'video/mp4',
-        caption: caption.trim() || clip.caption,
+        uri: payload.uri,
+        fileName: payload.fileName,
+        mimeType: payload.mimeType,
+        caption: caption.trim() || clip?.caption || '我的作品',
         tags,
       });
 
       setStatus('done');
-      setMessage(
-        result.coverGenerated
-          ? `已提交，视频 ID ${result.id}。审核通过后才会出现在推荐流。`
-          : `已提交，视频 ID ${result.id}。服务器未安装 ffmpeg，封面将在后台显示为占位图。`,
-      );
+      setMessage(`已提交，视频 ID ${result.id}。审核通过后才会出现在推荐流。`);
       setOnline(true);
     } catch (error) {
       setStatus('error');
@@ -102,6 +148,9 @@ export default function PublishScreen() {
   };
 
   const busy = status === 'uploading';
+  // Only a live upload blocks the button. A failed health probe must not: it is
+  // a hint, not the truth, and the upload itself reports the real error.
+  const disabled = busy || status === 'done';
 
   return (
     <KeyboardAvoidingView
@@ -118,33 +167,58 @@ export default function PublishScreen() {
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {/* 预览 */}
-        <View style={styles.preview}>
-          <Image source={clip.thumbnail} style={styles.previewImage} resizeMode="cover" />
-          <View style={styles.previewBadge}>
-            <Text style={styles.previewBadgeText}>
-              {clip.durationSeconds}s · 720×1280
-            </Text>
+        {clip ? (
+          <View style={styles.preview}>
+            <Image source={clip.thumbnail} style={styles.previewImage} resizeMode="cover" />
+            <View style={styles.previewBadge}>
+              <Text style={styles.previewBadgeText}>示例素材 · {clip.durationSeconds}s</Text>
+            </View>
           </View>
-        </View>
+        ) : (
+          <View style={[styles.preview, styles.previewPicked]}>
+            <Ionicons name="videocam" size={40} color={colors.textTertiary} />
+            <Text style={styles.pickedName} numberOfLines={2}>
+              {selection.kind === 'gallery' ? selection.fileName : ''}
+            </Text>
+            <View style={styles.previewBadge}>
+              <Text style={styles.previewBadgeText}>来自相册</Text>
+            </View>
+          </View>
+        )}
 
-        {/* 素材选择 */}
-        <Text style={styles.sectionLabel}>选择素材</Text>
+        {/* 主路径：相册 */}
+        <Pressable onPress={pickFromGallery} style={styles.galleryButton} accessibilityRole="button">
+          <Ionicons name="images-outline" size={19} color={colors.textPrimary} />
+          <Text style={styles.galleryButtonText}>
+            {selection.kind === 'gallery' ? '重新选择视频' : '从相册选择视频'}
+          </Text>
+        </Pressable>
+
+        {/* 备选：内置示例素材。Web / 模拟器没有相册，靠它把链路跑通。 */}
+        <Text style={styles.sectionLabel}>或使用内置示例素材</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.clipRow}>
-          {VIDEOS.map((item, itemIndex) => (
-            <Pressable
-              key={item.id}
-              onPress={() => setIndex(itemIndex)}
-              style={[styles.clip, itemIndex === index && styles.clipActive]}
-              accessibilityLabel={`素材 ${item.id}`}
-            >
-              <Image source={item.thumbnail} style={styles.clipImage} resizeMode="cover" />
-              {itemIndex === index ? (
-                <View style={styles.clipCheck}>
-                  <Ionicons name="checkmark" size={13} color="#000" />
-                </View>
-              ) : null}
-            </Pressable>
-          ))}
+          {VIDEOS.map((item, itemIndex) => {
+            const active = selection.kind === 'clip' && itemIndex === selection.index;
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => {
+                  setSelection({ kind: 'clip', index: itemIndex });
+                  setStatus('idle');
+                  setMessage('');
+                }}
+                style={[styles.clip, active && styles.clipActive]}
+                accessibilityLabel={`素材 ${item.id}`}
+              >
+                <Image source={item.thumbnail} style={styles.clipImage} resizeMode="cover" />
+                {active ? (
+                  <View style={styles.clipCheck}>
+                    <Ionicons name="checkmark" size={13} color="#000" />
+                  </View>
+                ) : null}
+              </Pressable>
+            );
+          })}
         </ScrollView>
 
         {/* 文案 */}
@@ -152,7 +226,7 @@ export default function PublishScreen() {
         <TextInput
           value={caption}
           onChangeText={setCaption}
-          placeholder={clip.caption}
+          placeholder={clip?.caption ?? '说点什么…'}
           placeholderTextColor={colors.textTertiary}
           style={styles.input}
           multiline
@@ -178,22 +252,32 @@ export default function PublishScreen() {
 
         {/* 状态 */}
         {message ? (
-          <View style={[styles.notice, status === 'error' && styles.noticeError, status === 'done' && styles.noticeDone]}>
+          <View
+            style={[
+              styles.notice,
+              status === 'error' && styles.noticeError,
+              status === 'done' && styles.noticeDone,
+            ]}
+          >
             <Text style={styles.noticeText}>{message}</Text>
           </View>
         ) : null}
 
-        <View style={styles.serverRow}>
+        <Pressable onPress={recheck} style={styles.serverRow} accessibilityRole="button">
           <View style={[styles.dot, online ? styles.dotOn : styles.dotOff]} />
           <Text style={styles.serverText}>
-            {online === null ? '正在检测服务器…' : online ? `已连接 ${API_BASE}` : `未连接服务器（${API_BASE}）`}
+            {online === null
+              ? '正在检测服务器…'
+              : online
+                ? `已连接 ${API_BASE}`
+                : `未连接服务器（${API_BASE}）· 点此重试`}
           </Text>
-        </View>
+        </Pressable>
 
         <Pressable
           onPress={submit}
-          disabled={busy || online === false || status === 'done'}
-          style={[styles.submit, (busy || online === false || status === 'done') && styles.submitDisabled]}
+          disabled={disabled}
+          style={[styles.submit, disabled && styles.submitDisabled]}
           accessibilityRole="button"
         >
           {busy ? (
@@ -226,8 +310,18 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 26 },
   body: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl * 2 },
 
-  preview: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface, marginBottom: spacing.lg },
-  previewImage: { width: '100%', height: 300 },
+  preview: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface, marginBottom: spacing.sm },
+  previewImage: { width: '100%', height: 280 },
+  previewPicked: {
+    height: 190,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    borderStyle: 'dashed',
+  },
+  pickedName: { color: colors.textSecondary, fontSize: 13, paddingHorizontal: spacing.xl, textAlign: 'center' },
   previewBadge: {
     position: 'absolute',
     right: spacing.md,
@@ -239,7 +333,18 @@ const styles = StyleSheet.create({
   },
   previewBadgeText: { color: '#fff', fontSize: 11 },
 
-  sectionLabel: { color: colors.textSecondary, fontSize: 13, fontWeight: '600', marginBottom: spacing.sm, marginTop: spacing.md },
+  galleryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    height: 46,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+  },
+  galleryButtonText: { color: colors.textPrimary, fontSize: fontSize.body, fontWeight: '600' },
+
+  sectionLabel: { color: colors.textSecondary, fontSize: 13, fontWeight: '600', marginBottom: spacing.sm, marginTop: spacing.lg },
   clipRow: { gap: spacing.sm, paddingBottom: spacing.xs },
   clip: { width: 62, height: 82, borderRadius: radius.md, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent' },
   clipActive: { borderColor: colors.brand },

@@ -2,7 +2,7 @@
   "expo": {
     "name": "抖音",
     "slug": "douyin-app",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "douyin",
@@ -15,6 +15,7 @@
     },
     "android": {
       "package": "com.example.douyinapp",
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -36,6 +37,20 @@
           "backgroundColor": "#000000",
           "image": "./assets/splash-icon.png",
           "imageWidth": 180
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "允许「抖音」访问相册，以便选择要发布的视频。"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ]
