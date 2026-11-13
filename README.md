@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/covers/16-douyin-app.jpg" alt="douyin-app 项目封面" width="100%"></p>
+
 # 抖音 · Douyin Clone (Expo / React Native)
 
 一个用 **Expo SDK 57 + React Native 0.86 + TypeScript** 写的仿抖音短视频 App。
